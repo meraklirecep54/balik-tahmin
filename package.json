@@ -1,6 +1,6 @@
 {
   "name": "balik-tahmin",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Türkiye kıyıları için saatlik balık avı olasılığı tahmini (Open-Meteo verisiyle)",
   "main": "server.js",
   "type": "module",

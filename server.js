@@ -71,11 +71,14 @@ app.get("/api/forecast/:id", async (req, res, next) => {
   }
 });
 
-app.get("/api/health", (_req, res) => res.json({ ok: true, cache: cacheStats() }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, version: "1.1.2", node: process.version, cache: cacheStats() }));
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(502).json({ error: "Hava verisi şu an alınamıyor. Birkaç dakika sonra tekrar deneyin." });
+  res.status(502).json({
+    error: "Hava verisi şu an alınamıyor. Birkaç dakika sonra tekrar deneyin.",
+    detay: String(err?.message ?? err).slice(0, 300),
+  });
 });
 
 app.listen(PORT, () => console.log(`BalıkTahmin çalışıyor → http://localhost:${PORT}`));

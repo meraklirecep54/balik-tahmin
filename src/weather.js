@@ -28,14 +28,31 @@ const HOURLY_MARINE = [
 const cache = new Map(); // spotId -> { at, data }
 const inflight = new Map(); // batchKey -> Promise
 
-async function getJson(url, params) {
+let lastError = null; // teşhis için son hata
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function getJson(url, params, tries = 3) {
   const qs = new URLSearchParams(params).toString();
-  const res = await fetch(`${url}?${qs}`, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`${url} → HTTP ${res.status} ${body.slice(0, 200)}`);
+  let err;
+  for (let t = 1; t <= tries; t++) {
+    try {
+      const res = await fetch(`${url}?${qs}`, {
+        signal: AbortSignal.timeout(20000),
+        headers: { "User-Agent": "BalikTahmin/1.1.2" },
+      });
+      if (res.ok) return res.json();
+      const body = await res.text().catch(() => "");
+      err = new Error(`${url.split("/")[2]} → HTTP ${res.status} ${body.slice(0, 200)}`);
+      // 4xx (429 hariç) tekrar denemeye değmez
+      if (res.status < 500 && res.status !== 429) break;
+    } catch (e) {
+      err = new Error(`${url.split("/")[2]} → ${e.name}: ${e.message}`);
+    }
+    if (t < tries) await sleep(1500 * t);
   }
-  return res.json();
+  lastError = { at: new Date().toISOString(), message: err.message };
+  throw err;
 }
 
 function baseParams(spots) {
@@ -143,5 +160,5 @@ export async function getConditions(spots) {
 }
 
 export function cacheStats() {
-  return { entries: cache.size, ttlMinutes: CACHE_TTL_MS / 60000 };
+  return { entries: cache.size, ttlMinutes: CACHE_TTL_MS / 60000, lastError };
 }
